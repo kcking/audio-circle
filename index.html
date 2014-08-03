@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script>
+      $(function() {
+        navigator.getUserMedia  = navigator.getUserMedia ||
+                                  navigator.webkitGetUserMedia ||
+                                  navigator.mozGetUserMedia ||
+                                  navigator.msGetUserMedia;
+        window.AudioContext = window.AudioContext ||
+                              window.webkitAudioContext;
+        if (navigator.getUserMedia && window.AudioContext) {
+          var context = new AudioContext();
+          navigator.getUserMedia({ audio: true }, function(stream) {
+            var microphone = context.createMediaStreamSource(stream);
+            microphone.connect(context.destination);
+          }, function(err) {
+            alert("Error: " + String(err));
+          });
+        } else {
+          alert("Your browser is not supported.");
+        }
+      });
+    </script>
+  </head>
+  <body>
+    Hello, world!
+  </body>
+</html>
