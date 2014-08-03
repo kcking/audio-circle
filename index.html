@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <script src="//code.jquery.com/jquery-2.1.1.min.js"></script>
     <script src="/angular.js"></script>
-    <link href="//fonts.googleapis.com/css?family=Source+Sans+Pro" rel="stylesheet" type="text/css">
     <script src="socket.io.js"></script>
     <script>
       audio_circle = angular.module('audio_circle', []);
@@ -210,10 +209,10 @@
     </script>
   </head>
   <body data-ng-cloak class="ng-cloak" data-ng-controller="AudioCircle">
-    <div style="text-align: center; font-size: 4em;">
+    <div style="text-align: center; font-size: 4em; margin-top: 50px;">
       {{ main_text }}
     </div>
-    <div data-ng-show="canChooseTeam()">
+    <div data-ng-show="canChooseTeam()" style="text-align: center; margin-top: 50px;">
       <button type="button" data-ng-click="initiateA()">Node A</button>
       <button type="button" data-ng-click="initiateB()">Node B</button>
     </div>
