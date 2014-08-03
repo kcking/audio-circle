@@ -4,22 +4,8 @@
     <meta charset="UTF-8">
     <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
     <script>
-      var context, soundSource, microphone, convolver, processor, prevInputBuffer;
+      var lastChirpTime, context, soundSource, microphone, convolver, processor, prevInputBuffer;
       $(function() {
-        /*chirpOnSecond = function(f) {
-          var chirp = new Audio('chirp-10k.ogg');
-          currentMillis = performance.timing.fetchStart + window.performance.now();
-          millisUntilNextSecond = 1000 - (currentMillis % 1000);
-          setTimeout(function() {
-            if (millisUntilNextSecond > 10) {
-              <!--chirp.play();-->
-              console.log('chirp');
-            }
-            f(f)
-          }, millisUntilNextSecond);
-        }
-        chirpOnSecond(chirpOnSecond);*/
-
         navigator.getUserMedia  = navigator.getUserMedia ||
                                   navigator.webkitGetUserMedia ||
                                   navigator.mozGetUserMedia ||
@@ -31,11 +17,11 @@
             context = new AudioContext();
 
             var bufferSize = 1024;
-            var convolutionWindow = 150;
+            var convolutionWindow = 64;
             var chirpFrequency = 10000;
 
             var inChirp = false;
-            var prevChirpTime = null;
+            lastChirpTime = null;
 
             processor = context.createScriptProcessor(bufferSize, 1, 1);
             prevInputBuffer = context.createBuffer(1, bufferSize, 44100);
@@ -68,15 +54,15 @@
                 }
                 outputData[i] = 0;
                 var result = Math.sqrt((sinComponent * sinComponent / rmsSquared) + (cosComponent * cosComponent / rmsSquared)) / convolutionWindow;
-                if (result > 0.5) {
-                  if (!inChirp && sample - prevChirpTime > 22050) {
-                    if (prevChirpTime) {
-                      console.log(String(sample - prevChirpTime));
+                if (result > 0.55) {
+                  if (!inChirp && sample - lastChirpTime > 22050) {
+                    if (lastChirpTime) {
+                      console.log(String(sample - lastChirpTime));
                     }
-                    prevChirpTime = sample;
+                    lastChirpTime = sample;
                     inChirp = true;
                   }
-                } else if (result < 0.01) {
+                } else if (result < 0.3) {
                   if (inChirp) {
                     inChirp = false;
                   }
@@ -95,13 +81,17 @@
             alert('Error calling getUserMedia: ' + String(e));
           });
         } else {
-          console.log(AudioContext);
           alert('Unsupported browser.');
         }
       });
+
+      function nodeA() {
+        //
+      };
     </script>
   </head>
   <body>
-    Hello, world!
+    <button type="button" onclick="nodeA();">Node A</button>
+    <button type="button" onclick="nodeB();">Node B</button>
   </body>
 </html>
