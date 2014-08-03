@@ -33,6 +33,26 @@
         }, 2000);
       }
 
+      var rttInitTimeA, syncTime;
+
+      function nodeA() {
+        if (state === 'rtt-init') {
+          rttInitTimeA = sample + chirpLatency * 2;
+          chirp(rttInitTimeA);
+          state = 'rtt-wait-own-a';
+        } else {
+          alert('Not ready yet.');
+        }
+      };
+
+      function nodeB() {
+        if (state === 'rtt-init') {
+          state = 'rtt-wait-other-b';
+        } else {
+          alert('Not ready yet.');
+        }
+      };
+
       function chirp(time) {
         nextChirpTime = time - chirpLatency;
       }
@@ -43,14 +63,23 @@
           numSelfChirpsLeft--;
           if (numSelfChirpsLeft == 0) {
             selfChirpEstimates.sort();
-            console.log(selfChirpEstimates);
             chirpLatency = selfChirpEstimates[Math.floor(selfChirpEstimates.length / 2)];
             clearTimeout(selfChirpTimer);
-            state = 'rtt';
-            console.log(chirpLatency);
+            state = 'rtt-init';
           } else {
             selfChirp();
           }
+        } else if (state === 'rtt-wait-own-a') {
+          state = 'rtt-wait-other-a';
+        } else if (state === 'rtt-wait-other-a') {
+          syncTime = sample + Math.round((sample - rttInitTimeA) / 2);
+          state = 'dead';
+          console.log(syncTime);
+        } else if (state === 'rtt-wait-other-b') {
+          syncTime = sample + 10 * chirpLatency;
+          chirp(sample + 20 * chirpLatency);
+          state = 'dead';
+          console.log(syncTime);
         }
       }
 
@@ -132,14 +161,6 @@
       }
 
       $(initAudio);
-
-      function nodeA() {
-        if (ready) {
-          //
-        } else {
-          alert('Not ready yet.');
-        }
-      };
     </script>
   </head>
   <body>
