@@ -4,8 +4,58 @@
     <meta charset="UTF-8">
     <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
     <script>
-      var lastChirpTime, context, soundSource, microphone, convolver, processor, prevInputBuffer;
-      $(function() {
+      var bufferSize = 1024;
+      var convolutionWindow = 64;
+      var chirpFrequency = 10000;
+      var chirpLength = 4 * 44.1;
+
+      var state, chirpLatency, sample, lastChirpTime, nextChirpTime;
+      var context, soundSource, microphone, convolver, processor, prevInputBuffer; // global because of Chrome bugs
+      state = 'init';
+      sample = 0;
+      chirpLatency = 0;
+      nextChirpTime = null;
+
+      var numSelfChirpsLeft = 3;
+      var expectedSelfChirpTime;
+      var selfChirpTimer = null;
+      var selfChirpEstimates = [];
+
+      function selfChirp() {
+        if (selfChirpTimer !== null) {
+          clearTimeout(selfChirpTimer);
+        }
+        expectedSelfChirpTime = sample + chirpLength * 100;
+        chirp(expectedSelfChirpTime);
+        state = 'self-chirp';
+        selfChirpTimer = setTimeout(function() {
+          selfChirp();
+        }, 2000);
+      }
+
+      function chirp(time) {
+        nextChirpTime = time - chirpLatency;
+      }
+
+      function onChirp() {
+        if (state === 'self-chirp') {
+          selfChirpEstimates.push(sample - expectedSelfChirpTime);
+          numSelfChirpsLeft--;
+          if (numSelfChirpsLeft == 0) {
+            selfChirpEstimates.sort();
+            console.log(selfChirpEstimates);
+            chirpLatency = selfChirpEstimates[Math.floor(selfChirpEstimates.length / 2)];
+            clearTimeout(selfChirpTimer);
+            state = 'rtt';
+            console.log(chirpLatency);
+          } else {
+            selfChirp();
+          }
+        }
+      }
+
+      // initialize audio
+      function initAudio() {
         navigator.getUserMedia  = navigator.getUserMedia ||
                                   navigator.webkitGetUserMedia ||
                                   navigator.mozGetUserMedia ||
@@ -16,16 +66,12 @@
           navigator.getUserMedia({ audio: true }, function(stream) {
             context = new AudioContext();
 
-            var bufferSize = 1024;
-            var convolutionWindow = 64;
-            var chirpFrequency = 10000;
-
             var inChirp = false;
             lastChirpTime = null;
 
             processor = context.createScriptProcessor(bufferSize, 1, 1);
             prevInputBuffer = context.createBuffer(1, bufferSize, 44100);
-            var sample = 0;
+            sample = 0;
             processor.onaudioprocess = function(e) {
               var inputData = e.inputBuffer.getChannelData(0);
               var outputData = e.outputBuffer.getChannelData(0);
@@ -36,40 +82,38 @@
                 var cosComponent = 0;
                 var rmsSquared = 0;
                 for (var j = 0; j < convolutionWindow; j++) {
+                  var arg = (sample - j) * sampleToRadians;
+                  var s;
                   if (i < j) {
-                    rmsSquared += prevData[bufferSize + i - j] * prevData[bufferSize + i - j];
+                    s = prevData[bufferSize + i - j];
                   } else {
-                    rmsSquared += inputData[i - j] * inputData[i - j];
+                    s = inputData[i - j];
                   }
+                  sinComponent += s * Math.sin(arg);
+                  cosComponent += s * Math.cos(arg);
+                  rmsSquared += s * s;
                 }
                 rmsSquared /= convolutionWindow;
-                for (var j = 0; j < convolutionWindow; j++) {
-                  if (i < j) {
-                    sinComponent += prevData[bufferSize + i - j] * Math.sin((sample - j) * sampleToRadians);
-                    cosComponent += prevData[bufferSize + i - j] * Math.cos((sample - j) * sampleToRadians);
-                  } else {
-                    sinComponent += inputData[i - j] * Math.sin((sample - j) * sampleToRadians);
-                    cosComponent += inputData[i - j] * Math.cos((sample - j) * sampleToRadians);
-                  }
-                }
-                outputData[i] = 0;
-                var result = Math.sqrt((sinComponent * sinComponent / rmsSquared) + (cosComponent * cosComponent / rmsSquared)) / convolutionWindow;
-                if (result > 0.55) {
-                  if (!inChirp && sample - lastChirpTime > 22050) {
-                    if (lastChirpTime) {
-                      console.log(String(sample - lastChirpTime));
-                    }
+                var result = ((sinComponent * sinComponent / rmsSquared) + (cosComponent * cosComponent / rmsSquared)) / (convolutionWindow * convolutionWindow);
+                if (result > 0.3025) {
+                  if (!inChirp && (lastChirpTime === null || sample - lastChirpTime > chirpLength * 50)) {
+                    onChirp();
                     lastChirpTime = sample;
                     inChirp = true;
                   }
-                } else if (result < 0.3) {
-                  if (inChirp) {
-                    inChirp = false;
-                  }
+                } else if (result < 0.09 && inChirp) {
+                  inChirp = false;
                 }
+
+                if (nextChirpTime && sample > nextChirpTime && sample < nextChirpTime + chirpLength) {
+                  outputData[i] = Math.sin(sample * sampleToRadians);
+                } else {
+                  outputData[i] = 0;
+                }
+
                 sample++;
               }
-              for (var i = 0; i < bufferSize; i++) {
+              for (var i = bufferSize + 1 - convolutionWindow; i < bufferSize; i++) {
                 prevData[i] = inputData[i];
               }
             }
@@ -77,16 +121,24 @@
 
             microphone = context.createMediaStreamSource(stream);
             microphone.connect(processor);
+
+            selfChirp();
           }, function(e) {
             alert('Error calling getUserMedia: ' + String(e));
           });
         } else {
           alert('Unsupported browser.');
         }
-      });
+      }
+
+      $(initAudio);
 
       function nodeA() {
-        //
+        if (ready) {
+          //
+        } else {
+          alert('Not ready yet.');
+        }
       };
     </script>
   </head>
