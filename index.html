@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
     <script>
-      var context, soundSource, microphone, convolver, processor;
+      var context, soundSource, microphone, convolver, processor, prevInputBuffer;
       $(function() {
         /*chirpOnSecond = function(f) {
           var chirp = new Audio('chirp-10k.ogg');
@@ -27,73 +27,73 @@
         window.AudioContext     = window.AudioContext ||
                                   window.webkitAudioContext;
         if (navigator.getUserMedia && window.AudioContext) {
-          var ajaxRequest = new XMLHttpRequest();
-          ajaxRequest.open('GET', 'us.ogg', true);
-          ajaxRequest.responseType = 'arraybuffer';
-          ajaxRequest.onload = function() {
-            navigator.getUserMedia({ audio: true }, function(stream) {
-              context = new AudioContext();
+          navigator.getUserMedia({ audio: true }, function(stream) {
+            context = new AudioContext();
 
-              bufferSize = 1024;
-              convolutionWindow = 176;
-              chirpFrequency = 10000;
+            var bufferSize = 1024;
+            var convolutionWindow = 150;
+            var chirpFrequency = 10000;
 
-              processor = context.createScriptProcessor(bufferSize, 1, 1);
-              prevInputBuffer = context.createBuffer(1, bufferSize, 44100);
-              var sample = 0;
-              processor.onaudioprocess = function(e) {
-                var inputData = e.inputBuffer.getChannelData(0);
-                var outputData = e.outputBuffer.getChannelData(0);
-                var prevData = prevInputBuffer.getChannelData(0);
-                var sampleToRadians = chirpFrequency * 2 * Math.PI / 44100;
-                var maxFound = 0;
-                for (var i = 0; i < bufferSize; i++) {
-                  var sinComponent = 0;
-                  var cosComponent = 0;
-                  var rmsSquared = 0;
-                  for (var j = 0; j < convolutionWindow; j++) {
-                    if (i < j) {
-                      rmsSquared += prevData[bufferSize + i - j] * prevData[bufferSize + i - j];
-                    } else {
-                      rmsSquared += inputData[i - j] * inputData[i - j];
+            var inChirp = false;
+            var prevChirpTime = null;
+
+            processor = context.createScriptProcessor(bufferSize, 1, 1);
+            prevInputBuffer = context.createBuffer(1, bufferSize, 44100);
+            var sample = 0;
+            processor.onaudioprocess = function(e) {
+              var inputData = e.inputBuffer.getChannelData(0);
+              var outputData = e.outputBuffer.getChannelData(0);
+              var prevData = prevInputBuffer.getChannelData(0);
+              var sampleToRadians = chirpFrequency * 2 * Math.PI / 44100;
+              for (var i = 0; i < bufferSize; i++) {
+                var sinComponent = 0;
+                var cosComponent = 0;
+                var rmsSquared = 0;
+                for (var j = 0; j < convolutionWindow; j++) {
+                  if (i < j) {
+                    rmsSquared += prevData[bufferSize + i - j] * prevData[bufferSize + i - j];
+                  } else {
+                    rmsSquared += inputData[i - j] * inputData[i - j];
+                  }
+                }
+                rmsSquared /= convolutionWindow;
+                for (var j = 0; j < convolutionWindow; j++) {
+                  if (i < j) {
+                    sinComponent += prevData[bufferSize + i - j] * Math.sin((sample - j) * sampleToRadians);
+                    cosComponent += prevData[bufferSize + i - j] * Math.cos((sample - j) * sampleToRadians);
+                  } else {
+                    sinComponent += inputData[i - j] * Math.sin((sample - j) * sampleToRadians);
+                    cosComponent += inputData[i - j] * Math.cos((sample - j) * sampleToRadians);
+                  }
+                }
+                outputData[i] = 0;
+                var result = Math.sqrt((sinComponent * sinComponent / rmsSquared) + (cosComponent * cosComponent / rmsSquared)) / convolutionWindow;
+                if (result > 0.5) {
+                  if (!inChirp && sample - prevChirpTime > 22050) {
+                    if (prevChirpTime) {
+                      console.log(String(sample - prevChirpTime));
                     }
+                    prevChirpTime = sample;
+                    inChirp = true;
                   }
-                  rmsSquared /= convolutionWindow;
-                  for (var j = 0; j < convolutionWindow; j++) {
-                    if (i < j) {
-                      sinComponent += prevData[bufferSize + i - j] * Math.sin((sample - j) * sampleToRadians);
-                      cosComponent += prevData[bufferSize + i - j] * Math.cos((sample - j) * sampleToRadians);
-                    } else {
-                      sinComponent += inputData[i - j] * Math.sin((sample - j) * sampleToRadians);
-                      cosComponent += inputData[i - j] * Math.cos((sample - j) * sampleToRadians);
-                    }
+                } else if (result < 0.01) {
+                  if (inChirp) {
+                    inChirp = false;
                   }
-                  outputData[i] = 0;
-                  var result = Math.sqrt((sinComponent * sinComponent / rmsSquared) + (cosComponent * cosComponent / rmsSquared)) / convolutionWindow;
-                  if (maxFound < result) {
-                    maxFound = result;
-                  }
-                  sample++;
                 }
-                for (var i = 0; i < bufferSize; i++) {
-                  prevData[i] = inputData[i];
-                }
-                if (maxFound > 0.18) {
-                  console.log(maxFound);
-                }
+                sample++;
               }
-              processor.connect(context.destination);
+              for (var i = 0; i < bufferSize; i++) {
+                prevData[i] = inputData[i];
+              }
+            }
+            processor.connect(context.destination);
 
-              microphone = context.createMediaStreamSource(stream);
-              microphone.connect(processor);
-            }, function(e) {
-              alert('Error calling getUserMedia: ' + String(e));
-            });
-          };
-          ajaxRequest.onerror = function(e) {
-            alert('Error loading unit sample response: ' + String(e));
-          }
-          ajaxRequest.send();
+            microphone = context.createMediaStreamSource(stream);
+            microphone.connect(processor);
+          }, function(e) {
+            alert('Error calling getUserMedia: ' + String(e));
+          });
         } else {
           console.log(AudioContext);
           alert('Unsupported browser.');
