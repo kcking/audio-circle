@@ -3,6 +3,19 @@
   <head>
     <meta charset="UTF-8">
     <script>
+      chirpOnSecond = function(f) {
+        var chirp = new Audio('chirp-10k.ogg');
+        currentMillis = performance.timing.fetchStart + window.performance.now();
+        millisUntilNextSecond = 1000 - (currentMillis % 1000);
+        setTimeout(function() {
+          if (millisUntilNextSecond > 10) {
+            chirp.play();
+            console.log('chirp');
+          }
+          f(f)
+        }, millisUntilNextSecond);
+      }
+      chirpOnSecond(chirpOnSecond);
       navigator.getUserMedia  = navigator.getUserMedia ||
                                 navigator.webkitGetUserMedia ||
                                 navigator.mozGetUserMedia ||
