@@ -2,45 +2,45 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
     <script>
-      $(function() {
-        navigator.getUserMedia  = navigator.getUserMedia ||
-                                  navigator.webkitGetUserMedia ||
-                                  navigator.mozGetUserMedia ||
-                                  navigator.msGetUserMedia;
-        window.AudioContext     = window.AudioContext ||
-                                  window.webkitAudioContext;
-        if (navigator.getUserMedia && window.AudioContext) {
-          var ajaxRequest = new XMLHttpRequest();
-          ajaxRequest.open('GET', 'us.ogg', true);
-          ajaxRequest.responseType = 'arraybuffer';
-          ajaxRequest.onload = function() {
-            navigator.getUserMedia({ audio: true }, function(stream) {
-              var context = new AudioContext();
-              context.decodeAudioData(ajaxRequest.response, function(buffer) {
-                var convolver = context.createConvolver();
-                var soundSource = context.createBufferSource();
-                soundSource.buffer = buffer;
-                convolver.buffer = buffer;
-                convolver.normalize = false;
-                convolver.connect(context.destination);
+      navigator.getUserMedia  = navigator.getUserMedia ||
+                                navigator.webkitGetUserMedia ||
+                                navigator.mozGetUserMedia ||
+                                navigator.msGetUserMedia;
+      window.AudioContext     = window.AudioContext ||
+                                window.webkitAudioContext;
+      if (navigator.getUserMedia && window.AudioContext) {
+        var ajaxRequest = new XMLHttpRequest();
+        ajaxRequest.open('GET', 'us.ogg', true);
+        ajaxRequest.responseType = 'arraybuffer';
+        ajaxRequest.onload = function() {
+          navigator.getUserMedia({ audio: true }, function(stream) {
+            var context = new AudioContext();
+            context.decodeAudioData(ajaxRequest.response, function(buffer) {
+              var processor = context.createScriptProcessor(1024, 1, 1);
+              processor.onaudioprocess = function(e) {
+                var inputData = e.inputBuffer.getChannelData(0);
+                var outputData = e.outputBuffer.getChannelData(0);
+                for (var i = 0; i < inputData.length; i++) {
+                  outputData[i] = inputData[i];
+                }
+              }
+              processor.connect(context.destination);
 
-                var microphone = context.createMediaStreamSource(stream);
-                microphone.connect(convolver);
-              }, function(err) {
-                alert('Error decoding audio: ' + String(err));
-              });
-            }, function(err) {
-              alert('Error calling getUserMedia: ' + String(err));
+              var microphone = context.createMediaStreamSource(stream);
+              microphone.connect(processor);
+            }, function(e) {
+              alert('Error decoding audio: ' + String(e));
             });
-          };
-          ajaxRequest.onerror = function(err) {
-            alert('Error loading unit sample response: ' + String(err));
-          }
-          ajaxRequest.send();
+          }, function(e) {
+            alert('Error calling getUserMedia: ' + String(e));
+          });
         };
-      });
+        ajaxRequest.onerror = function(e) {
+          alert('Error loading unit sample response: ' + String(e));
+        }
+        ajaxRequest.send();
+      };
     </script>
   </head>
   <body>
