@@ -2,58 +2,70 @@
 <html>
   <head>
     <meta charset="UTF-8">
+    <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
     <script>
-      chirpOnSecond = function(f) {
-        var chirp = new Audio('chirp-10k.ogg');
-        currentMillis = performance.timing.fetchStart + window.performance.now();
-        millisUntilNextSecond = 1000 - (currentMillis % 1000);
-        setTimeout(function() {
-          if (millisUntilNextSecond > 10) {
-            <!--chirp.play();-->
-            console.log('chirp');
-          }
-          f(f)
-        }, millisUntilNextSecond);
-      }
-      chirpOnSecond(chirpOnSecond);
-      navigator.getUserMedia  = navigator.getUserMedia ||
-                                navigator.webkitGetUserMedia ||
-                                navigator.mozGetUserMedia ||
-                                navigator.msGetUserMedia;
-      window.AudioContext     = window.AudioContext ||
-                                window.webkitAudioContext;
-      if (navigator.getUserMedia && window.AudioContext) {
-        var ajaxRequest = new XMLHttpRequest();
-        ajaxRequest.open('GET', 'us.ogg', true);
-        ajaxRequest.responseType = 'arraybuffer';
-        ajaxRequest.onload = function() {
-          navigator.getUserMedia({ audio: true }, function(stream) {
-            var context = new AudioContext();
-            context.decodeAudioData(ajaxRequest.response, function(buffer) {
-              var processor = context.createScriptProcessor(1024, 1, 1);
-              processor.onaudioprocess = function(e) {
-                var inputData = e.inputBuffer.getChannelData(0);
-                var outputData = e.outputBuffer.getChannelData(0);
-                for (var i = 0; i < inputData.length; i++) {
-                  outputData[i] = inputData[i];
-                }
-              }
-              processor.connect(context.destination);
-
-              var microphone = context.createMediaStreamSource(stream);
-              microphone.connect(processor);
-            }, function(e) {
-              alert('Error decoding audio: ' + String(e));
-            });
-          }, function(e) {
-            alert('Error calling getUserMedia: ' + String(e));
-          });
-        };
-        ajaxRequest.onerror = function(e) {
-          alert('Error loading unit sample response: ' + String(e));
+      var microphone, processor;
+      $(function() {
+        chirpOnSecond = function(f) {
+          var chirp = new Audio('chirp-10k.ogg');
+          currentMillis = performance.timing.fetchStart + window.performance.now();
+          millisUntilNextSecond = 1000 - (currentMillis % 1000);
+          setTimeout(function() {
+            if (millisUntilNextSecond > 10) {
+              <!--chirp.play();-->
+              console.log('chirp');
+            }
+            f(f)
+          }, millisUntilNextSecond);
         }
-        ajaxRequest.send();
-      };
+        chirpOnSecond(chirpOnSecond);
+
+        navigator.getUserMedia  = navigator.getUserMedia ||
+                                  navigator.webkitGetUserMedia ||
+                                  navigator.mozGetUserMedia ||
+                                  navigator.msGetUserMedia;
+        window.AudioContext     = window.AudioContext ||
+                                  window.webkitAudioContext;
+        if (navigator.getUserMedia && window.AudioContext) {
+          var ajaxRequest = new XMLHttpRequest();
+          ajaxRequest.open('GET', 'us.ogg', true);
+          ajaxRequest.responseType = 'arraybuffer';
+          ajaxRequest.onload = function() {
+            navigator.getUserMedia({ audio: true }, function(stream) {
+              var context = new AudioContext();
+              context.decodeAudioData(ajaxRequest.response, function(buffer) {
+                processor = context.createScriptProcessor(1024, 1, 1);
+                var sample = 0;
+                processor.onaudioprocess = function(e) {
+                  var inputData = e.inputBuffer.getChannelData(0);
+                  var outputData = e.outputBuffer.getChannelData(0);
+                  for (var i = 0; i < inputData.length; i++) {
+                    outputData[i] = inputData[i];
+                  }
+                  sample += inputData.length;
+
+                  console.log(inputData[0]);
+                }
+                processor.connect(context.destination);
+
+                microphone = context.createMediaStreamSource(stream);
+                microphone.connect(processor);
+              }, function(e) {
+                alert('Error decoding audio: ' + String(e));
+              });
+            }, function(e) {
+              alert('Error calling getUserMedia: ' + String(e));
+            });
+          };
+          ajaxRequest.onerror = function(e) {
+            alert('Error loading unit sample response: ' + String(e));
+          }
+          ajaxRequest.send();
+        } else {
+          console.log(AudioContext);
+          alert('Unsupported browser.');
+        }
+      });
     </script>
   </head>
   <body>
