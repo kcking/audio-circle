@@ -12,7 +12,6 @@
       var state, chirpLatency, sample, lastChirpTime, nextChirpTime;
       var context, soundSource, microphone, convolver, processor, prevInputBuffer; // global because of Chrome bugs
       state = 'init';
-      console.log(state);
       sample = 0;
       chirpLatency = 0;
       nextChirpTime = null;
@@ -29,7 +28,6 @@
         expectedSelfChirpTime = sample + chirpLength * 100;
         chirp(expectedSelfChirpTime);
         state = 'self-chirp';
-        console.log(state);
         selfChirpTimer = setTimeout(function() {
           selfChirp();
         }, 2000);
@@ -42,7 +40,6 @@
           rttInitTimeA = sample + chirpLatency * 2;
           chirp(rttInitTimeA);
           state = 'rtt-wait-own-a';
-          console.log(state);
         } else {
           alert('Not ready yet.');
         }
@@ -51,7 +48,6 @@
       function nodeB() {
         if (state === 'rtt-init') {
           state = 'rtt-wait-other-b';
-          console.log(state);
         } else {
           alert('Not ready yet.');
         }
@@ -70,25 +66,21 @@
             chirpLatency = selfChirpEstimates[Math.floor(selfChirpEstimates.length / 2)];
             clearTimeout(selfChirpTimer);
             state = 'rtt-init';
-            console.log(state);
           } else {
             selfChirp();
           }
         } else if (state === 'rtt-wait-own-a') {
           state = 'rtt-wait-other-a';
-          console.log(state);
         } else if (state === 'rtt-wait-other-a') {
           syncTime = rttInitTimeA + Math.round((sample - rttInitTimeA) / 2);
           state = 'dead-a';
-          console.log(state);
         } else if (state === 'rtt-wait-other-b') {
           syncTime = sample + 10 * chirpLatency;
           chirp(sample + 20 * chirpLatency);
           state = 'dead-b';
-          console.log(state);
         } else if (state === 'dead-b') {
-          var last = (syncTime % 44100) + Math.floor((sample + chirpLatency * 2) / 44100) * 44100;
-          console.log((sample - last)/44100*340.29);
+          var last = (syncTime % 22050) + Math.floor((sample + chirpLatency * 2) / 22050) * 22050;
+          console.log(String((sample - last) / 44100 * 340.29) + " meters.");
         }
       }
 
@@ -163,16 +155,18 @@
             selfChirp();
           }, function(e) {
             alert('Error calling getUserMedia: ' + String(e));
+            state = 'super-dead';
           });
         } else {
           alert('Unsupported browser.');
+          state = 'super-dead';
         }
       }
 
       setInterval(function() {
         if (state === 'dead-a') {
           if (sample > nextChirpTime + chirpLength) {
-            chirp((syncTime % 44100) + Math.ceil((sample + chirpLatency * 2) / 44100) * 44100);
+            chirp((syncTime % 22050) + Math.ceil((sample + chirpLatency * 2) / 22050) * 22050);
           }
         }
       }, 1);
