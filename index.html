@@ -169,7 +169,7 @@
       setInterval(function() {
         if (state === 'dead') {
           if (sample > nextChirpTime + chirpLength) {
-            chirp((syncTime % 44100) + sample + chirpLatency * 2);
+            chirp((syncTime % 44100) + Math.ceil((sample + chirpLatency * 2) / 44100) * 44100);
           }
         }
       }, 1);
