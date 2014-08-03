@@ -18,11 +18,27 @@ io.on('connection', function(socket) {
         for (var i = 0; i < sockets.length; i++) {
         }
     });
-    socket.on('update_neighbor', function(data) {
+    socket.on('complete_pairing', function(data) {
         sockWrapper.neighbors[data['id']] = data['distance'];
+        if (syncingPair[0] == sockWrapper) {
+            syncingPair[0] = null;
+        } else if (syncingPair[1] == sockWrapper) {
+            syncingPair[1] = null;
+        }
     });
-
 });
+
+var initiate_pairing = function(A, B) {
+    if (syncingPair[0] || syncingPair[1]) {
+        return;
+    }
+    syncingPair[0] = A;
+    syncingPair[1] = B;
+    // Send partners eachother's ID
+    A.sock.emit('init_pairing', {'id': B.id});
+    B.sock.emit('init_pairing', {'id': A.id});
+
+}
 
 var busy = false;
 var processNodes = function() {
@@ -37,7 +53,19 @@ var processNodes = function() {
                 minNeighbors = Object.keys(sockets[i].neighbors).length;
             }
         }
+        secondMinNeighbors = 0;
+        secondLoneliestSock = null;
+        for (var i = 0; i < sockets.length; i++) {
+            if ((secondLoneliestSock == null ||
+                Object.keys(sockets[i].neighbors).length < secondMinNeighbors)
+                && sockets[i] != loneliestSock) {
+                secondLoneliestSock = sockets[i];
+                secondMinNeightbors = Object.keys(sockets[i].neighbors).length;
+            }
+        }
     }
+    if (loneliestSock.neighbors[secondLoneliestSock
+    initiate_pairing(loneliestSock, secondLoneliestSock);
     busy = false;
 }
 
