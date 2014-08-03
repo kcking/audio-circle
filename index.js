@@ -35,8 +35,8 @@ var initiate_pairing = function(A, B) {
     syncingPair[0] = A;
     syncingPair[1] = B;
     // Send partners eachother's ID
-    A.sock.emit('init_pairing', {'id': B.id});
-    B.sock.emit('init_pairing', {'id': A.id});
+    A.sock.emit('init_pairing', {'id': B.id, 'role': 'A'});
+    B.sock.emit('init_pairing', {'id': A.id, 'role': 'B'});
 
 }
 
@@ -63,9 +63,10 @@ var processNodes = function() {
                 secondMinNeightbors = Object.keys(sockets[i].neighbors).length;
             }
         }
+        if !(loneliestSock.neighbors[secondLoneliestSock.id]) {
+            initiate_pairing(loneliestSock, secondLoneliestSock);
+        }
     }
-    if (loneliestSock.neighbors[secondLoneliestSock
-    initiate_pairing(loneliestSock, secondLoneliestSock);
     busy = false;
 }
 
