@@ -160,6 +160,12 @@
         }
       }
 
+      setInterval(function() {
+        if (sample > nextChirpTime + chirpLength) {
+          chirp((syncTime % 44100) + sample + chirpLatency * 2);
+        }
+      }, 1);
+
       $(initAudio);
     </script>
   </head>
