@@ -79,13 +79,16 @@
           console.log(state);
         } else if (state === 'rtt-wait-other-a') {
           syncTime = rttInitTimeA + Math.round((sample - rttInitTimeA) / 2);
-          state = 'dead';
+          state = 'dead-a';
           console.log(state);
         } else if (state === 'rtt-wait-other-b') {
           syncTime = sample + 10 * chirpLatency;
           chirp(sample + 20 * chirpLatency);
-          state = 'dead';
+          state = 'dead-b';
           console.log(state);
+        } else if (state === 'dead-b') {
+          var last = (syncTime % 44100) + Math.floor((sample + chirpLatency * 2) / 44100) * 44100;
+          console.log((sample - last)/44100*340.29;
         }
       }
 
@@ -167,7 +170,7 @@
       }
 
       setInterval(function() {
-        if (state === 'dead') {
+        if (state === 'dead-a') {
           if (sample > nextChirpTime + chirpLength) {
             chirp((syncTime % 44100) + Math.ceil((sample + chirpLatency * 2) / 44100) * 44100);
           }
