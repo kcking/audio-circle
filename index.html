@@ -15,6 +15,8 @@
         var chirpFrequency = 10000;
         var chirpLength = 4 * 44.1;
 
+        $scope.main_text = 'Calibrating...'
+
         var state, chirpLatency, sample, lastChirpTime, nextChirpTime;
         var context, soundSource, microphone, convolver, processor, prevInputBuffer; // global because of Chrome bugs
         state = 'init';
@@ -43,20 +45,24 @@
         var numSyncTimesLeft = 3;
         var syncTimes = [];
 
-        function initiateA() {
+        $scope.initiateA = function() {
           if (numSyncTimesLeft === 0) {
             syncTimes.sort();
             syncTime = syncTimes[Math.floor(syncTimes.length / 2)];
             state = 'dead-a';
+            $scope.main_text = 'You are free to move about the cabin'
+            $scope.$digest();
           } else {
             rttInitTimeA = sample + chirpLatency * 2;
             chirp(rttInitTimeA);
             state = 'rtt-wait-own-a';
             numSyncTimesLeft--;
+
+            $scope.main_text = 'Calibrating with B...'
           }
         }
 
-        function initiateB() {
+        $scope.initiateB = function() {
           if (numSyncTimesLeft === 0) {
             syncTimes.sort();
             syncTime = syncTimes[Math.floor(syncTimes.length / 2)];
@@ -64,24 +70,10 @@
           } else {
             state = 'rtt-wait-other-b';
             numSyncTimesLeft--;
+
+            $scope.main_text = 'Calibrating with A...'
           }
         }
-
-        $scope.nodeA = function() {
-          if (state === 'rtt-init') {
-            initiateA();
-          } else {
-            alert('Not ready yet.');
-          }
-        };
-
-        $scope.nodeB = function() {
-          if (state === 'rtt-init') {
-            initiateB();
-          } else {
-            alert('Not ready yet.');
-          }
-        };
 
         function chirp(time) {
           nextChirpTime = time - chirpLatency;
@@ -96,6 +88,7 @@
               chirpLatency = selfChirpEstimates[Math.floor(selfChirpEstimates.length / 2)];
               clearTimeout(selfChirpTimer);
               state = 'rtt-init';
+              $scope.main_text = 'Choose your destiny';
               $scope.$digest();
             } else {
               selfChirp();
@@ -105,16 +98,17 @@
           } else if (state === 'rtt-wait-other-a') {
             syncTimes.push(rttInitTimeA + Math.round((sample - rttInitTimeA) / 2));
             state = 'limbo';
-            setTimeout(initiateA, 1000);
+            setTimeout($scope.initiateA, 1000);
           } else if (state === 'rtt-wait-other-b') {
             syncTimes.push(sample + 10 * chirpLatency);
             chirp(sample + 20 * chirpLatency);
             state = 'rtt-wait-own-b';
           } else if (state === 'rtt-wait-own-b') {
-            initiateB();
+            $scope.initiateB();
           } else if (state === 'dead-b') {
             var last = (syncTime % 44100) + Math.floor((sample + chirpLatency * 2) / 44100) * 44100;
-            console.log(String((sample - last) / 44100 * 340.29) + 'm');
+            $scope.main_text = String(Math.round((sample - last) / 44100 * 340.29 * 100) / 100) + 'm';
+            $scope.$digest();
           }
         }
 
@@ -188,11 +182,13 @@
 
               selfChirp();
             }, function(e) {
-              alert('Error calling getUserMedia: ' + String(e));
+              $scope.main_text = 'Error calling getUserMedia: ' + String(e);
+              $scope.$digest();
               state = 'super-dead';
             });
           } else {
-            alert('Unsupported browser.');
+            $scope.main_text = 'Unsupported browser.';
+            $scope.$digest();
             state = 'super-dead';
           }
         }
@@ -214,9 +210,12 @@
     </script>
   </head>
   <body data-ng-cloak class="ng-cloak" data-ng-controller="AudioCircle">
+    <div style="text-align: center; font-size: 4em;">
+      {{ main_text }}
+    </div>
     <div data-ng-show="canChooseTeam()">
-      <button type="button" data-ng-click="nodeA()">Node A</button>
-      <button type="button" data-ng-click="nodeB()">Node B</button>
+      <button type="button" data-ng-click="initiateA()">Node A</button>
+      <button type="button" data-ng-click="initiateB()">Node B</button>
     </div>
   </body>
 </html>
