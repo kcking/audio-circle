@@ -12,6 +12,7 @@
       var state, chirpLatency, sample, lastChirpTime, nextChirpTime;
       var context, soundSource, microphone, convolver, processor, prevInputBuffer; // global because of Chrome bugs
       state = 'init';
+      console.log(state);
       sample = 0;
       chirpLatency = 0;
       nextChirpTime = null;
@@ -28,6 +29,7 @@
         expectedSelfChirpTime = sample + chirpLength * 100;
         chirp(expectedSelfChirpTime);
         state = 'self-chirp';
+        console.log(state);
         selfChirpTimer = setTimeout(function() {
           selfChirp();
         }, 2000);
@@ -40,6 +42,7 @@
           rttInitTimeA = sample + chirpLatency * 2;
           chirp(rttInitTimeA);
           state = 'rtt-wait-own-a';
+          console.log(state);
         } else {
           alert('Not ready yet.');
         }
@@ -48,6 +51,7 @@
       function nodeB() {
         if (state === 'rtt-init') {
           state = 'rtt-wait-other-b';
+          console.log(state);
         } else {
           alert('Not ready yet.');
         }
@@ -66,20 +70,22 @@
             chirpLatency = selfChirpEstimates[Math.floor(selfChirpEstimates.length / 2)];
             clearTimeout(selfChirpTimer);
             state = 'rtt-init';
+            console.log(state);
           } else {
             selfChirp();
           }
         } else if (state === 'rtt-wait-own-a') {
           state = 'rtt-wait-other-a';
+          console.log(state);
         } else if (state === 'rtt-wait-other-a') {
           syncTime = sample + Math.round((sample - rttInitTimeA) / 2);
           state = 'dead';
-          console.log(syncTime);
+          console.log(state);
         } else if (state === 'rtt-wait-other-b') {
           syncTime = sample + 10 * chirpLatency;
           chirp(sample + 20 * chirpLatency);
           state = 'dead';
-          console.log(syncTime);
+          console.log(state);
         }
       }
 
@@ -161,8 +167,10 @@
       }
 
       setInterval(function() {
-        if (sample > nextChirpTime + chirpLength) {
-          chirp((syncTime % 44100) + sample + chirpLatency * 2);
+        if (state === 'dead') {
+          if (sample > nextChirpTime + chirpLength) {
+            chirp((syncTime % 44100) + sample + chirpLatency * 2);
+          }
         }
       }, 1);
 
