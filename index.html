@@ -9,19 +9,37 @@
                                   navigator.webkitGetUserMedia ||
                                   navigator.mozGetUserMedia ||
                                   navigator.msGetUserMedia;
-        window.AudioContext = window.AudioContext ||
-                              window.webkitAudioContext;
+        window.AudioContext     = window.AudioContext ||
+                                  window.webkitAudioContext;
         if (navigator.getUserMedia && window.AudioContext) {
-          var context = new AudioContext();
-          navigator.getUserMedia({ audio: true }, function(stream) {
-            var microphone = context.createMediaStreamSource(stream);
-            microphone.connect(context.destination);
-          }, function(err) {
-            alert("Error: " + String(err));
-          });
-        } else {
-          alert("Your browser is not supported.");
-        }
+          var ajaxRequest = new XMLHttpRequest();
+          ajaxRequest.open('GET', 'us.ogg', true);
+          ajaxRequest.responseType = 'arraybuffer';
+          ajaxRequest.onload = function() {
+            navigator.getUserMedia({ audio: true }, function(stream) {
+              var context = new AudioContext();
+              context.decodeAudioData(ajaxRequest.response, function(buffer) {
+                var convolver = context.createConvolver();
+                var soundSource = context.createBufferSource();
+                soundSource.buffer = buffer;
+                convolver.buffer = buffer;
+                convolver.normalize = false;
+                convolver.connect(context.destination);
+
+                var microphone = context.createMediaStreamSource(stream);
+                microphone.connect(convolver);
+              }, function(err) {
+                alert('Error decoding audio: ' + String(err));
+              });
+            }, function(err) {
+              alert('Error calling getUserMedia: ' + String(err));
+            });
+          };
+          ajaxRequest.onerror = function(err) {
+            alert('Error loading unit sample response: ' + String(err));
+          }
+          ajaxRequest.send();
+        };
       });
     </script>
   </head>
