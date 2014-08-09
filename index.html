@@ -105,7 +105,7 @@
           } else if (state === 'rtt-wait-own-b') {
             $scope.initiateB();
           } else if (state === 'dead-b') {
-            var last = (syncTime % 44100) + Math.floor((sample + chirpLatency * 2) / 44100) * 44100;
+            var last = (syncTime % 44100) + Math.floor((sample) / 44100) * 44100 + 11025;
             $scope.main_text = String(Math.round((sample - last) / 44100 * 340.29 * 100) / 100) + 'm';
             $scope.$digest();
           }
@@ -195,7 +195,7 @@
         setInterval(function() {
           if (state === 'dead-a') {
             if (sample > nextChirpTime + chirpLength) {
-              chirp((syncTime % 44100) + Math.ceil((sample + chirpLatency * 2) / 44100) * 44100);
+              chirp((syncTime % 44100) + Math.ceil((sample) / 44100) * 44100 + 11025);
             }
           }
         }, 1);
