@@ -22,13 +22,13 @@
         sample = 0;
         chirpLatency = 0;
         nextChirpTime = null;
-
         var numSelfChirpsLeft = 3;
         var expectedSelfChirpTime;
         var selfChirpTimer = null;
         var selfChirpEstimates = [];
 
         function selfChirp() {
+			console.log("selfChirp");
           if (selfChirpTimer !== null) {
             clearTimeout(selfChirpTimer);
           }
@@ -79,12 +79,14 @@
         }
 
         function onChirp() {
+			console.log("onChirp");
           if (state === 'determine-own-latency') {
             selfChirpEstimates.push(sample - expectedSelfChirpTime);
             numSelfChirpsLeft--;
             if (numSelfChirpsLeft == 0) {
               selfChirpEstimates.sort();
               chirpLatency = selfChirpEstimates[Math.floor(selfChirpEstimates.length / 2)];
+			  console.log("self chirpLatency = " + chirpLatency);
               clearTimeout(selfChirpTimer);
               state = 'rtt-init';
               $scope.main_text = 'Choose your destiny';
@@ -178,6 +180,8 @@
 
               microphone = context.createMediaStreamSource(stream);
               microphone.connect(processor);
+
+			  console.log("finished audio init");
 
               selfChirp();
             }, function(e) {
